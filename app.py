@@ -139,6 +139,16 @@ class ControlWindow(QMainWindow):
         header.addWidget(title)
         header.addStretch()
         header.addWidget(status)
+
+        exit_btn = QPushButton("✕")
+        exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        exit_btn.setToolTip("Quit Eigopop (Esc / q)")
+        exit_btn.setStyleSheet(
+            "background-color: transparent; color: #a6adc8; border: none; font-size: 13px; font-weight: bold; padding: 0 4px;"
+        )
+        exit_btn.clicked.connect(QApplication.quit)
+        header.addWidget(exit_btn)
+
         layout.addLayout(header)
 
         snip_btn = QPushButton("✂  Snip Japanese Text (Alt+S)")
@@ -174,7 +184,9 @@ class ControlWindow(QMainWindow):
         )
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_S and (
+        if event.key() in (Qt.Key.Key_Escape, Qt.Key.Key_Q):
+            QApplication.quit()
+        elif event.key() == Qt.Key.Key_S and (
             event.modifiers() & Qt.KeyboardModifier.AltModifier
         ):
             self.controller.trigger_snip()
@@ -213,9 +225,19 @@ def main():
         return
 
     # Set application ID for Wayland window matching
+    import signal
+    from PyQt6.QtCore import QTimer
+
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     app = QApplication(sys.argv)
     app.setApplicationName("eigopop")
     app.setDesktopFileName("eigopop")
+
+    # Periodic timer to let Python process POSIX signals (Ctrl+C)
+    sig_timer = QTimer()
+    sig_timer.timeout.connect(lambda: None)
+    sig_timer.start(250)
 
     controller = EigopopController(force_cpu=args.cpu)
     window = ControlWindow(controller)
