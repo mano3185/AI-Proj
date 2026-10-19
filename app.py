@@ -1,4 +1,4 @@
-"""Main application entrypoint for Eigopop."""
+"""Main application entrypoint for Eigopop with native Wayland & X11 support."""
 
 import sys
 import time
@@ -38,10 +38,10 @@ class EigopopController:
         self.capture = ScreenCapture()
         self.active_popup: ResultPopup | None = None
         self.active_snipper: SnippingOverlay | None = None
-        print("[Ready] All engines active.\n")
+        print(f"[Ready] All engines active (Wayland: {self.capture.is_wayland}).\n")
 
     def process_image(
-        self, image: Image.Image, display_pos: QPoint | None = None
+        self, image: Image.Image, display_pos: QPoint | tuple[int, int] | None = None
     ) -> ResultPopup | None:
         """Run OCR, NLP, and dictionary lookup on an image, then show ResultPopup."""
         t_start = time.perf_counter()
@@ -71,27 +71,40 @@ class EigopopController:
                 ]
 
         total_latency = (time.perf_counter() - t_start) * 1000
-
         print(f"[Eigopop] Recognized: '{text}' in {total_latency:.1f}ms")
 
         # 4. Display Result Popup
         if self.active_popup:
             self.active_popup.close()
 
+        point_pos = None
+        if isinstance(display_pos, tuple):
+            point_pos = QPoint(display_pos[0], display_pos[1])
+        elif isinstance(display_pos, QPoint):
+            point_pos = display_pos
+
         self.active_popup = ResultPopup(
             text=text,
             tokens=tokens,
             latency_ms=total_latency,
-            pos=display_pos,
+            pos=point_pos,
         )
         self.active_popup.show()
         return self.active_popup
 
     def trigger_snip(self):
-        """Open the full-screen transparent snipping canvas."""
+        """Trigger screen region selection."""
         if self.active_popup:
             self.active_popup.close()
 
+        # If on Wayland and slurp is available, use native layer-shell slurp (NEVER gets tiled!)
+        if self.capture.is_wayland and self.capture.has_slurp:
+            img, pos = self.capture.select_and_capture_wayland()
+            if img:
+                self.process_image(img, display_pos=pos)
+            return
+
+        # Fallback to Qt full-screen overlay (X11)
         self.active_snipper = SnippingOverlay(capture_engine=self.capture)
         self.active_snipper.snip_completed.connect(self.process_image)
         self.active_snipper.show()
@@ -103,10 +116,11 @@ class ControlWindow(QMainWindow):
     def __init__(self, controller: EigopopController):
         super().__init__()
         self.controller = controller
+        self.setObjectName("eigopop")
         self.setWindowTitle("Eigopop")
         self.setFixedSize(280, 110)
         self.setWindowFlags(
-            Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool
+            Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Dialog
         )
 
         central = QWidget(self)
@@ -120,7 +134,7 @@ class ControlWindow(QMainWindow):
         title.setStyleSheet(
             "font-weight: bold; font-size: 13px; color: #89b4fa; letter-spacing: 1px;"
         )
-        status = QLabel("● RTX 4060 Ready")
+        status = QLabel("● Ready")
         status.setStyleSheet("color: #a6e3a1; font-size: 10px;")
         header.addWidget(title)
         header.addStretch()
@@ -181,7 +195,6 @@ def main():
     args = parser.parse_args()
 
     if args.image:
-        # CLI Mode: process image and print to terminal
         image_path = Path(args.image)
         if not image_path.exists():
             print(f"Error: Image not found at {image_path}")
@@ -199,8 +212,11 @@ def main():
                 print(f"  - {t.surface} (Base: {t.dictionary_form}) -> {m}")
         return
 
-    # GUI Mode: Launch PyQt6 Application
+    # Set application ID for Wayland window matching
     app = QApplication(sys.argv)
+    app.setApplicationName("eigopop")
+    app.setDesktopFileName("eigopop")
+
     controller = EigopopController(force_cpu=args.cpu)
     window = ControlWindow(controller)
     window.show()

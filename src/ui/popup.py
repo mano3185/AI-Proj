@@ -87,6 +87,8 @@ class ResultPopup(QDialog):
         parent=None,
     ):
         super().__init__(parent)
+        self.setObjectName("eigopop")
+        self.setWindowTitle("Eigopop")
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
