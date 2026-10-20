@@ -6,6 +6,9 @@ from PIL import Image
 import torch
 from manga_ocr import MangaOcr
 
+from src.vision.preprocess import extract_text_lines
+
+
 class OCREngine:
     def __init__(self, device: str | None = None, force_cpu: bool = False):
         if force_cpu:
@@ -22,13 +25,24 @@ class OCREngine:
         print(f"[OCREngine] Model loaded in {duration:.1f}ms")
 
     def recognize(self, image: Image.Image | str | Path) -> tuple[str, float]:
-        """Recognize Japanese text from PIL Image or image file path.
+        """Recognize Japanese text with adaptive line segmentation & preprocessing.
         Returns: (recognized_text, latency_ms)
         """
         if isinstance(image, (str, Path)):
             image = Image.open(image).convert("RGB")
 
         start = time.perf_counter()
-        text = self.mocr(image)
+
+        # Step 1: Extract individual text lines via horizontal projection profiling
+        lines = extract_text_lines(image)
+
+        # Step 2: Run OCR on each line
+        results = []
+        for line_img in lines:
+            line_text = self.mocr(line_img).strip()
+            if line_text:
+                results.append(line_text)
+
+        full_text = "\n".join(results)
         latency_ms = (time.perf_counter() - start) * 1000
-        return text.strip(), latency_ms
+        return full_text.strip(), latency_ms
