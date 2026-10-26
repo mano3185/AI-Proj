@@ -55,10 +55,12 @@ eigopop/
 ## 🛠️ Getting Started
 
 ### 1. Prerequisites
+
 * Python 3.10+
 * NVIDIA GPU with CUDA drivers (optional, falls back to CPU automatically)
 
 ### 2. Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/eigopop.git
@@ -70,34 +72,25 @@ pip install -e .
 
 ### 3. Usage
 
-#### Interactive Desktop GUI:
+#### Interactive Desktop GUI
+
 ```bash
 python app.py
 ```
+
 * Click **"✂ Snip Japanese Text"** or press **`Alt + S`**.
 * Click and drag a box over any Japanese text on your screen (manga bubble, game dialogue, or video).
 * Release your mouse button — the floating dictionary card will pop up instantaneously!
 * Press **`Esc`** or click **`✕`** to dismiss.
 
-#### CLI Test Mode (Single Image):
+#### CLI Test Mode (Single Image)
+
 ```bash
 python app.py --image test_crop_1.png
 ```
 
-#### Run Comprehensive Pipeline Benchmarks:
+#### Run Comprehensive Pipeline Benchmarks
+
 ```bash
 python test_pipeline.py
 ```
-
----
-
-## 🎓 Academic AI Evaluation Roadmap
-
-For university AI course evaluation, Eigopop supports:
-1. **Character Error Rate (CER) Benchmarking:** Quantitative comparison against baseline models (Tesseract, EasyOCR).
-2. **Font Complexity Stress Testing:** Evaluating accuracy across 4 tiers:
-   * Tier 1: Standard clean fonts (Gothic / Mincho).
-   * Tier 2: Stylized manga/game fonts.
-   * Tier 3: Casual handwritten dialogue and scribbles.
-   * Tier 4: Sound effects (Onomatopoeia) failure mode analysis.
-3. **NLP De-Inflection Accuracy:** Evaluating morphological boundary accuracy across complex verbal inflections.

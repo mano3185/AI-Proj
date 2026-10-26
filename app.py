@@ -46,6 +46,9 @@ class EigopopController:
         """Run OCR, NLP, and dictionary lookup on an image, then show ResultPopup."""
         t_start = time.perf_counter()
 
+        print(f"[Eigopop] Snip captured: {image.width}x{image.height} px")
+        image.save("/tmp/eigopop_last_snip.png")
+
         # 1. Vision OCR
         text, ocr_time = self.ocr.recognize(image)
         if not text:
